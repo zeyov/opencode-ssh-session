@@ -16,7 +16,14 @@
       "types": "./plugin/tui.tsx"
     }
   },
-  "files": ["src", "plugin", "scripts", "examples", "README.md", "LICENSE"],
+  "files": [
+    "src",
+    "plugin",
+    "scripts",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node --external @opencode/plugin && bun build plugin/tui.tsx --outdir dist --target node --external @opencode/plugin/tui",
     "test": "bun test",
@@ -32,9 +39,15 @@
     "solid-js": ">=1.9.0"
   },
   "peerDependenciesMeta": {
-    "@opentui/core": { "optional": true },
-    "@opentui/solid": { "optional": true },
-    "solid-js": { "optional": true }
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
@@ -42,7 +55,13 @@
     "@types/bun": "^1.4.0",
     "typescript": "^5.9.3"
   },
-  "keywords": ["opencode", "opencode-plugin", "ssh", "remote", "session"],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "ssh",
+    "remote",
+    "session"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
