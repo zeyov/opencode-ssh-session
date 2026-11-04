@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    {
+      "package": "./plugin",
+      "options": {
+        "askpass": "./scripts/askpass.exe"
+      }
+    }
+  ]
+}
