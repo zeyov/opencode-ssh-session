@@ -50,11 +50,7 @@
       "optional": true
     }
   },
-  "devDependencies": {
-    "@opencode/plugin": "2.2.5",
-    "@types/bun": "^1.4.0",
-    "typescript": "^5.9.3"
-  },
+  "devDependencies": {},
   "keywords": [
     "opencode",
     "opencode-plugin",
