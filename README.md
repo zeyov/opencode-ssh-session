@@ -4,28 +4,65 @@ An [OpenCode](https://opencode.ai) plugin that provides persistent SSH session t
 
 ## Installation
 
-This repository is an OpenCode **V2** plugin (`@opencode/plugin`).
+This repository is an OpenCode **V2** plugin (`@opencode/plugin`). Install it by cloning the repository and pointing your config at its `plugin/` directory.
 
-### From GitHub
+> `opencode plugin add github:...` is not used here: on OpenCode 2.2.5 that command fails for every GitHub package on some machines (`git dep preparation failed`), so the steps below avoid it.
+
+### 1. Clone
+
+```sh
+git clone https://github.com/zeyov/opencode-ssh-session ~/.config/opencode-opencode-ssh-session
+```
+
+Any stable directory works. Windows users typically use `%USERPROFILE%\opencode-ssh-session`.
+
+### 2. Point OpenCode at it
+
+Add the directory to `plugins` in `~/.config/opencode/opencode.json(c)` (global) or `opencode.json(c)` in the project (per project). Use an absolute path, or a path relative to the project root:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["github:zeyov/opencode-ssh-session"]
+  "plugins": [
+    {
+      "package": "/absolute/path/to/opencode-ssh-session/plugin",
+      "options": { "askpass": "/absolute/path/to/askpass.exe" }
+    }
+  ]
 }
 ```
 
-Or let the CLI add it to the global config:
+Windows example:
 
-```sh
-opencode plugin add github:zeyov/opencode-ssh-session
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    {
+      "package": "C:/Users/me/opencode-ssh-session/plugin",
+      "options": { "askpass": "C:/Users/me/opencode-ssh-session/scripts/askpass.exe" }
+    }
+  ]
+}
 ```
 
-The repository ships a project-level `opencode.json`, so cloning it and running OpenCode in that directory also works.
+The path must name the **`plugin` directory**, not a file. `askpass` is optional: skip it if you authenticate with keys or an SSH agent.
+
+### 3. Restart OpenCode
+
+The plugin loads at startup. You should see `ssh_connect`, `ssh`, `ssh_disconnect`, `ssh_info`, `ssh_upload`, `ssh_download` in the tool list, plus the `/ssh-connect`, `/ssh-status` and `/ssh-disconnect` commands.
+
+### Updating
+
+```sh
+cd ~/.config/opencode-opencode-ssh-session && git pull
+```
+
+Then restart OpenCode.
 
 ### Local development
 
-Point the config at the `plugin/` directory. A relative path must name a **directory**; a file path is skipped with a warning.
+Clone the repository and run OpenCode inside it. The repository ships a project-level `opencode.json` that already points at `./plugin`:
 
 ```json
 {
@@ -100,8 +137,8 @@ Then point the plugin at the absolute path:
 {
   "plugins": [
     {
-      "package": "github:zeyov/opencode-ssh-session",
-      "options": { "askpass": "C:/tools/askpass.exe" }
+      "package": "C:/Users/me/opencode-ssh-session/plugin",
+      "options": { "askpass": "C:/Users/me/opencode-ssh-session/scripts/askpass.exe" }
     }
   ]
 }
@@ -111,7 +148,11 @@ On Linux or macOS use an existing helper such as `ssh-askpass`, `ksshaskpass`, o
 `x11-ssh-askpass`:
 
 ```json
-{ "package": "github:zeyov/opencode-ssh-session", "options": { "askpass": "/usr/bin/ssh-askpass" } }
+{
+  "plugins": [
+    { "package": "/home/me/opencode-ssh-session/plugin", "options": { "askpass": "/usr/bin/ssh-askpass" } }
+  ]
+}
 ```
 
 Installing a key once is still the cheaper path, and then nothing ever prompts:
