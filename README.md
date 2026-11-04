@@ -4,21 +4,48 @@ An [OpenCode](https://opencode.ai) plugin that provides persistent SSH session t
 
 ## Installation
 
-This repository is an OpenCode **V2** plugin (`@opencode/plugin`). Install it by cloning the repository and pointing your config at its `plugin/` directory.
+This repository is an OpenCode **V2** plugin (`@opencode/plugin`). OpenCode discovers it automatically when it is cloned into the global plugins directory, so no configuration is needed.
 
 > `opencode plugin add github:...` is not used here: on OpenCode 2.2.5 that command fails for every GitHub package on some machines (`git dep preparation failed`), so the steps below avoid it.
 
-### 1. Clone
+### 1. Clone into the global plugins directory
 
 ```sh
-git clone https://github.com/zeyov/opencode-ssh-session ~/.config/opencode-opencode-ssh-session
+mkdir -p ~/.config/opencode/plugins
+git clone https://github.com/zeyov/opencode-ssh-session ~/.config/opencode/plugins/opencode-ssh-session
 ```
 
-Any stable directory works. Windows users typically use `%USERPROFILE%\opencode-ssh-session`.
+Windows (PowerShell):
 
-### 2. Point OpenCode at it
+```powershell
+git clone https://github.com/zeyov/opencode-ssh-session "$env:USERPROFILE\.config\opencode\plugins\opencode-ssh-session"
+```
 
-Add the directory to `plugins` in `~/.config/opencode/opencode.json(c)` (global) or `opencode.json(c)` in the project (per project). Use an absolute path, or a path relative to the project root:
+### 2. Build the password helper (Windows only)
+
+Only needed if you sign in with a password instead of a key or agent:
+
+```powershell
+pwsh -File "$env:USERPROFILE\.config\opencode\plugins\opencode-ssh-session\scripts\build-askpass.ps1"
+```
+
+The plugin finds this helper automatically. Linux and macOS users can rely on an existing helper instead — see [Passwords](#passwords).
+
+### 3. Restart OpenCode
+
+You should see `ssh_connect`, `ssh`, `ssh_disconnect`, `ssh_info`, `ssh_upload`, `ssh_download` in the tool list, plus the `/ssh-connect`, `/ssh-status` and `/ssh-disconnect` commands.
+
+### Updating
+
+```sh
+cd ~/.config/opencode/plugins/opencode-ssh-session && git pull
+```
+
+Then restart OpenCode.
+
+### Installing somewhere else
+
+A clone outside the plugins directory has to be registered explicitly. Point `plugins` at the **`plugin` subdirectory** (not a file), in the global `~/.config/opencode/opencode.json(c)` or a project `opencode.json(c)`:
 
 ```json
 {
@@ -32,33 +59,7 @@ Add the directory to `plugins` in `~/.config/opencode/opencode.json(c)` (global)
 }
 ```
 
-Windows example:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugins": [
-    {
-      "package": "C:/Users/me/opencode-ssh-session/plugin",
-      "options": { "askpass": "C:/Users/me/opencode-ssh-session/scripts/askpass.exe" }
-    }
-  ]
-}
-```
-
-The path must name the **`plugin` directory**, not a file. `askpass` is optional: skip it if you authenticate with keys or an SSH agent.
-
-### 3. Restart OpenCode
-
-The plugin loads at startup. You should see `ssh_connect`, `ssh`, `ssh_disconnect`, `ssh_info`, `ssh_upload`, `ssh_download` in the tool list, plus the `/ssh-connect`, `/ssh-status` and `/ssh-disconnect` commands.
-
-### Updating
-
-```sh
-cd ~/.config/opencode-opencode-ssh-session && git pull
-```
-
-Then restart OpenCode.
+Both `package` and `options.askpass` accept absolute paths; a relative `askpass` resolves against the project directory. The `askpass` option is optional — without it the plugin uses the helper bundled next to `src/`.
 
 ### Local development
 
