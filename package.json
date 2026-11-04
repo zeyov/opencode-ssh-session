@@ -32,11 +32,27 @@
     "lint:fix": "biome check --fix .",
     "format": "biome format --write ."
   },
-  "dependencies": {
-    "@opencode/plugin": "^2.2.5"
+  "dependencies": {},
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.2.5",
+    "@opentui/core": ">=0.8.0",
+    "@opentui/solid": ">=0.8.0",
+    "solid-js": ">=1.9.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
+    "@opencode/plugin": "2.2.5",
     "@types/bun": "^1.4.0",
     "typescript": "^5.9.3"
   },
