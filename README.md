@@ -178,6 +178,8 @@ Open a persistent SSH session to a remote host.
 
 `options` accepts only `-p`, `-l`, `-i`, and `-J`, each with a value. Every other flag is rejected before `ssh` starts, because flags such as `-o ProxyCommand=...` or `-F` would let a plugin call run arbitrary commands on the local machine. Put any other setting in `~/.ssh/config` and connect with the `Host` alias.
 
+Values may be quoted when they contain spaces (`-i "C:\Users\me\my key"`). `host` must not start with `-`: the destination is passed to `ssh` next to the command, and such a value would be read as an ssh flag. A leading `~` is expanded in every path argument (`localPath`, `remotePath`, `-i`), and a session opened to the same host with different flags is reconnected instead of reused.
+
 ### `ssh`
 
 Execute a command on the active SSH session. Shell state persists across calls.
@@ -266,6 +268,8 @@ The plugin spawns at most one `ssh` child process for each OpenCode session and 
 - Commands are non-interactive only (no `vim`, `top`, password prompts, etc.)
 - Command stdin is `/dev/null`, so commands that read stdin return immediately instead of blocking the session
 - Commands within a session execute one at a time
+- Each command is framed by markers, so output that a previous command left behind (a background job, a late flush) is dropped instead of being reported as part of the next command
+- Captured output is capped at 512 MiB per command; set `OC_SSH_MAX_OUTPUT` (characters) to change it. A command that exceeds the cap closes the session
 - Aborting or timing out `ssh_connect` or `ssh` closes that session's SSH connection
 - File transfers use base64 encoding over the existing connection
 - Remote paths are shell-quoted before transfer commands run
