@@ -22,6 +22,28 @@ function variantOf(text: string): Variant {
 }
 
 /**
+ * Foreground color for the footer status text.
+ *
+ * The slot has to ask the theme for a color. Without `fg` the OpenTUI text
+ * renderable falls back to its own default (black), which is invisible on the
+ * dark footer row — that is why the label used to disappear into the background.
+ * Reading the token inside `render` also keeps it correct when the user switches
+ * theme or light/dark mode while connected.
+ */
+function statusColor(ctx: Context): string {
+  const theme = ctx.theme as
+    | { text?: { base?: unknown; muted?: unknown; faint?: unknown } }
+    | undefined
+  const text = theme?.text
+  for (const candidate of [text?.base, text?.muted, text?.faint]) {
+    if (typeof candidate === "string" && candidate.length > 0) return candidate
+  }
+  // Last resort for a host that resolves no tokens at all: mid gray reads on both
+  // light and dark backgrounds.
+  return "#9a9a9a"
+}
+
+/**
  * TUI part.
  *
  * - Command feedback: mirrored from the session inbox as a toast.
@@ -96,7 +118,7 @@ const plugin = {
               try {
                 return (
                   <box flexDirection="row" gap={1} flexShrink={0}>
-                    <text>🔗 {host}</text>
+                    <text fg={statusColor(ctx)}>🔗 {host}</text>
                   </box>
                 ) as never
               } catch (error) {
