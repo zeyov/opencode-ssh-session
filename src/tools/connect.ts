@@ -3,6 +3,7 @@ import { requestPassword } from "../password"
 import type { Context, ToolDefinition } from "../plugin-types"
 import { spawnWithPasswordFallback } from "../session/auth"
 import { isAlive } from "../session/commands"
+import { validateHost } from "../session/connection"
 import type { SessionManager } from "../session/manager"
 import { withMutex } from "../session/mutex"
 import { setConnected } from "../shared"
@@ -34,13 +35,20 @@ export function createConnectTool(sessions: SessionManager, plugin: Context): To
     },
     async execute(input, context) {
       const args = input as { host: string; options?: string }
+      // Validate before asking for permission, so a value such as
+      // `-oProxyCommand=...` is never approved and never reaches argv.
+      const host = validateHost(args.host)
+      const options = args.options ?? ""
+
       let state = sessions.get(context.sessionID)
-      if (isAlive(state) && state.host === args.host) {
-        return { content: `Already connected to ${args.host}.` }
+      if (isAlive(state) && state.host === host && state.options === options) {
+        return { content: `Already connected to ${host}.` }
       }
 
-      await authorize(plugin, context, "ssh_connect", [args.host], { host: args.host })
+      await authorize(plugin, context, "ssh_connect", [host], { host })
 
+      // Different host, or the same host with different flags (port, key, jump
+      // host): the old session cannot serve the new request, so replace it.
       if (isAlive(state)) {
         state = sessions.replace(context.sessionID)
       }
@@ -49,14 +57,14 @@ export function createConnectTool(sessions: SessionManager, plugin: Context): To
         const content = await withMutex(state, () =>
           spawnWithPasswordFallback(
             state,
-            args.host,
-            args.options,
+            host,
+            options || undefined,
             context.signal,
             { askpass: askpassOf(plugin) },
             requestPassword,
           ),
         )
-        setConnected(args.host)
+        setConnected(host)
         return { content }
       } catch (error) {
         sessions.remove(context.sessionID)

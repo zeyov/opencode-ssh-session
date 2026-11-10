@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
-import { mkdir, readFile, rm } from "node:fs/promises"
-import { dirname } from "node:path"
+import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { dirname, join } from "node:path"
 import { note } from "./diag"
 import { passwordPath } from "./password-path"
 import { shared } from "./shared"
@@ -12,6 +13,43 @@ export type PasswordPromptResult =
   | undefined
   /** The user cancelled, or nothing arrived before the deadline. */
   | null
+
+const PASSWORD_DIR = join(tmpdir(), "opencode-ssh-session")
+/** Answers older than this are leftovers from a dialog nobody answered. */
+const STALE_ANSWER_MS = 10 * 60_000
+
+let sweepStarted = false
+
+/**
+ * Delete password hand-off files that were never picked up.
+ *
+ * The server removes an answer as soon as it reads it, but when the dialog times
+ * out (or the TUI writes after the deadline) the plaintext password used to stay
+ * in the temp directory forever.
+ */
+function sweepStaleAnswers(): void {
+  if (sweepStarted) return
+  sweepStarted = true
+
+  void (async () => {
+    try {
+      const entries = await readdir(PASSWORD_DIR)
+      const now = Date.now()
+      await Promise.all(
+        entries.map(async (name) => {
+          if (!name.startsWith("pw-")) return
+          const file = join(PASSWORD_DIR, name)
+          const info = await stat(file).catch(() => null)
+          if (info && now - info.mtimeMs > STALE_ANSWER_MS) {
+            await rm(file, { force: true }).catch(() => {})
+          }
+        }),
+      )
+    } catch {
+      // No directory yet; nothing to sweep.
+    }
+  })()
+}
 
 /**
  * Ask the TUI for a password.
@@ -29,6 +67,8 @@ export async function requestPassword(
     note("prompt: no bridge, handing over to askpass")
     return undefined
   }
+
+  sweepStaleAnswers()
 
   const requestID = randomUUID()
   const file = passwordPath(requestID)
@@ -64,6 +104,8 @@ export async function requestPassword(
   }
 
   note("prompt: timed out waiting for the dialog")
+  // Do not leave the answer (or a late writer's file) behind.
+  await rm(file, { force: true }).catch(() => {})
   // No dialog answered: the caller falls back to the askpass program.
   return undefined
 }

@@ -13,8 +13,72 @@ import type { SessionState } from "./state"
  */
 const SAFE_OPTION_FLAGS = new Set(["-p", "-l", "-i", "-J"])
 
+/**
+ * Split an option string into shell-like tokens, honouring single quotes, double
+ * quotes and backslash escapes.
+ *
+ * A plain whitespace split used to break every value that contains a space, which
+ * on Windows is the normal case for a private key path.
+ */
+export function tokenizeOptions(raw: string): string[] {
+  const tokens: string[] = []
+  let current = ""
+  let quote: '"' | "'" | null = null
+  let started = false
+
+  for (let index = 0; index < raw.length; index++) {
+    const char = raw[index]
+
+    // A backslash only escapes quotes, whitespace and another backslash, so a
+    // Windows path such as "C:\Users\me\.ssh\id_rsa" keeps its separators.
+    if (char === "\\" && quote !== "'") {
+      const next = raw[index + 1]
+      if (next !== undefined && /["'\\\s]/.test(next)) {
+        current += next
+        index++
+      } else {
+        current += char
+      }
+      started = true
+      continue
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = null
+      } else {
+        current += char
+      }
+      started = true
+      continue
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char
+      started = true
+      continue
+    }
+
+    if (/\s/.test(char)) {
+      if (started) {
+        tokens.push(current)
+        current = ""
+        started = false
+      }
+      continue
+    }
+
+    current += char
+    started = true
+  }
+
+  if (quote) throw new Error(`Unterminated ${quote} quote in SSH options.`)
+  if (started) tokens.push(current)
+  return tokens
+}
+
 export function parseExtraOptions(raw: string): string[] {
-  const tokens = raw.trim().split(/\s+/).filter(Boolean)
+  const tokens = tokenizeOptions(raw.trim()).filter(Boolean)
   const parsed: string[] = []
 
   for (let index = 0; index < tokens.length; index++) {
@@ -36,6 +100,38 @@ export function parseExtraOptions(raw: string): string[] {
   }
 
   return parsed
+}
+
+/**
+ * Reject anything that could be read as an `ssh` flag instead of a destination.
+ *
+ * The host ends up in argv next to the command, so a value such as
+ * `-oProxyCommand=...` would be parsed as an option by OpenSSH. Rejecting it here
+ * keeps the plugin's argument list from ever becoming an option injection, no
+ * matter how the rest of the argv is ordered later.
+ */
+export function validateHost(host: string): string {
+  const value = typeof host === "string" ? host.trim() : ""
+
+  if (!value) throw new Error("`host` must not be empty.")
+  if (value.startsWith("-")) {
+    throw new Error(
+      `Invalid SSH host '${value}': a host must not start with '-' (it would be parsed as an ssh option).`,
+    )
+  }
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0
+    if (code <= 0x20 || code === 0x7f) {
+      throw new Error(
+        `Invalid SSH host '${value}': it must not contain whitespace or control characters.`,
+      )
+    }
+  }
+  if (value.length > 512) {
+    throw new Error("Invalid SSH host: it is longer than 512 characters.")
+  }
+
+  return value
 }
 
 export interface SpawnOptions {
@@ -64,6 +160,7 @@ export async function spawnSSH(
   signal?: AbortSignal,
   spawnOptions: SpawnOptions = {},
 ): Promise<string> {
+  const destination = validateHost(host)
   const sshArgs = ["ssh", "-T"]
 
   const interactive = Boolean(spawnOptions.password) || spawnOptions.allowAskpass === true
@@ -89,7 +186,7 @@ export async function spawnSSH(
     sshArgs.push(...parseExtraOptions(options))
   }
 
-  sshArgs.push(host, "bash", "-l")
+  sshArgs.push(destination, "bash", "-l")
 
   if (signal?.aborted) {
     throw signal.reason instanceof Error ? signal.reason : new Error("SSH operation aborted.")
@@ -114,13 +211,16 @@ export async function spawnSSH(
     // its own console window on Windows.
     windowsHide: true,
   })
-  state.host = host
+  state.host = destination
+  state.options = options ?? ""
   state.buffer = ""
   state.stderr = ""
+  state.framed = false
+  state.desynced = false
   state.readerDone = false
 
   const stderrDone = startErrorReader(state, state.proc.stderr as ReadableStream<Uint8Array>)
-  startReader(state, state.proc.stdout as ReadableStream<Uint8Array>)
+  state.readerPromise = startReader(state, state.proc.stdout as ReadableStream<Uint8Array>)
 
   // initial handshake: consume any MOTD/banner
   const handshakeId = Math.random().toString(36).substring(2, 10)
@@ -131,15 +231,17 @@ export async function spawnSSH(
     state.connectedAt = Date.now()
   } catch (err) {
     killSSH(state)
-    await stderrDone
+    // Both readers must be finished before the state can be reused by a retry,
+    // otherwise the old reader marks the new session as dropped.
+    await Promise.all([stderrDone, state.readerPromise ?? Promise.resolve()])
     const errorMsg = state.stderr.trim() || (err instanceof Error ? err.message : String(err))
     const hint = /Permission denied \(publickey/i.test(errorMsg)
       ? "\nNo usable SSH key was offered. Install one with `ssh-copy-id`, or set the plugin `askpass` option to get a password prompt."
       : ""
-    throw new Error(`Failed to establish SSH session to ${host}: ${errorMsg}${hint}`)
+    throw new Error(`Failed to establish SSH session to ${destination}: ${errorMsg}${hint}`)
   }
 
-  return `Connected to ${host}. Shell state will persist between commands.`
+  return `Connected to ${destination}. Shell state will persist between commands.`
 }
 
 /**
@@ -148,7 +250,12 @@ export async function spawnSSH(
 export function killSSH(state: SessionState): string {
   const prevHost = state.host
 
-  state.pendingReject?.(new Error("SSH connection closed."))
+  const reject = state.pendingReject
+  state.pendingReject = null
+  state.pendingResolve = null
+  state.currentMarkerId = ""
+  reject?.(new Error("SSH connection closed."))
+
   if (state.proc) {
     try {
       state.proc.kill()
@@ -159,11 +266,11 @@ export function killSSH(state: SessionState): string {
 
   state.proc = null
   state.host = null
+  state.options = ""
   state.connectedAt = null
   state.buffer = ""
+  state.framed = false
+  state.desynced = true
   state.readerDone = true
-  state.pendingResolve = null
-  state.pendingReject = null
-  state.currentMarkerId = ""
   return prevHost ? `Disconnected from ${prevHost}.` : "No active SSH session."
 }

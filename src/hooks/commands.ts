@@ -4,6 +4,7 @@ import { requestPassword } from "../password"
 import type { Context } from "../plugin-types"
 import { spawnWithPasswordFallback } from "../session/auth"
 import { executeCommand, isAlive } from "../session/commands"
+import { validateHost } from "../session/connection"
 import type { SessionManager } from "../session/manager"
 import { withMutex } from "../session/mutex"
 import { setConnected, shared } from "../shared"
@@ -123,9 +124,18 @@ export async function registerCommands(ctx: Context, sessions: SessionManager): 
       name: "ssh-connect",
       description: "Connect to a remote host over SSH",
       async execute({ sessionID, prompt }) {
-        const { host, password, options } = parseArguments(prompt.text, "ssh-connect")
-        if (!host) {
+        const parsed = parseArguments(prompt.text, "ssh-connect")
+        const { password, options } = parsed
+        if (!parsed.host) {
           await report(ctx, sessionID, "用法：/ssh-connect <host> [密码] [-p 端口] [-i 私钥]")
+          return
+        }
+
+        let host: string
+        try {
+          host = validateHost(parsed.host)
+        } catch (error) {
+          await report(ctx, sessionID, `❌ ${errorMessage(error)}`)
           return
         }
 

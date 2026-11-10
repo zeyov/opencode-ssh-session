@@ -77,6 +77,9 @@ for line in sys.stdin:
         sys.stdout.write(f"<<__OC_SSH_DONE__{marker.group(1)}_{result.returncode}>>\\n")
         sys.stdout.flush()
         command_lines = []
+    elif re.search(r"<<__OC_SSH_BEGIN__[a-z0-9]+>>", line) or line.strip() == "__oc_ec=$?":
+        # Frame plumbing, not part of the command the caller wrote.
+        continue
     else:
         command_lines.append(line)
 `,

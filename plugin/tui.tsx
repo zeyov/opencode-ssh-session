@@ -1,6 +1,6 @@
 // @jsxImportSource @opentui/solid
 
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, rename, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
 import type { Plugin } from "@opencode/plugin/tui"
 import { note } from "../src/diag"
@@ -143,7 +143,11 @@ const plugin = {
 
           const file = passwordPath(requestID)
           await mkdir(dirname(file), { recursive: true })
-          await writeFile(file, value, { mode: 0o600 })
+          // Write aside and rename: the server polls this path every 150 ms and must
+          // never observe a partially written password.
+          const part = `${file}.part`
+          await writeFile(part, value, { mode: 0o600 })
+          await rename(part, file)
         } catch {
           // Cancelled or unavailable: the server falls back to its askpass.
         }

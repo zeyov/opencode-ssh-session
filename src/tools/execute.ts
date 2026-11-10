@@ -1,7 +1,7 @@
 import type { Context, ToolDefinition } from "../plugin-types"
 import { executeCommand, isAlive } from "../session/commands"
 import type { SessionManager } from "../session/manager"
-import { withMutex } from "../session/mutex"
+import { runInSession } from "./guard"
 import { authorize } from "./permissions"
 
 const DEFAULT_TIMEOUT = 120_000
@@ -37,16 +37,11 @@ export function createExecuteTool(sessions: SessionManager, plugin: Context): To
 
       await authorize(plugin, context, "bash", [args.command], { host: state.host })
 
-      try {
-        return {
-          content: await withMutex(state, () =>
-            executeCommand(state, args.command, args.timeout ?? DEFAULT_TIMEOUT, context.signal),
-          ),
-        }
-      } catch (error) {
-        sessions.remove(context.sessionID)
-        throw error
-      }
+      const content = await runInSession(sessions, context.sessionID, state, () =>
+        executeCommand(state, args.command, args.timeout ?? DEFAULT_TIMEOUT, context.signal),
+      )
+
+      return { content }
     },
   }
 }
