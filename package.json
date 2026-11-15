@@ -14,6 +14,10 @@
     "./tui": {
       "import": "./plugin/tui.tsx",
       "types": "./plugin/tui.tsx"
+    },
+    "./gui-experimental": {
+      "import": "./dist/gui-experimental.cjs",
+      "default": "./dist/gui-experimental.cjs"
     }
   },
   "files": [
@@ -21,11 +25,13 @@
     "plugin",
     "scripts",
     "examples",
+    "dist/gui-experimental.cjs",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --external @opencode/plugin && bun build plugin/tui.tsx --outdir dist --target node --external @opencode/plugin/tui",
+    "build": "bun build src/index.ts --outdir dist --target node --external @opencode/plugin && vite build",
+    "build:gui": "vite build",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
@@ -53,7 +59,10 @@
     "@biomejs/biome": "^2.5.11",
     "@opencode/plugin": "2.2.5",
     "@types/bun": "^1.4.0",
-    "typescript": "^5.9.3"
+    "solid-js": "^1.9.19",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8",
+    "vite-plugin-solid": "^2.11.16"
   },
   "keywords": [
     "opencode",

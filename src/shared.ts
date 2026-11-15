@@ -8,6 +8,8 @@ export interface SharedState {
   lastFeedback: Map<string, { text: string; at: number }>
   /** Set once the TUI part is reachable through RPC. */
   emitPasswordRequest: ((payload: { requestID: string; host: string }) => Promise<void>) | undefined
+  /** Pending password prompts answered through RPC, keyed by request ID. */
+  passwordRequests: Map<string, (password: string | null) => void>
   /** Broadcasts the current connection so the TUI can show it. */
   publishConnection: ((host: string | null) => Promise<void>) | undefined
   /** Last known connected host, null when idle. */
@@ -35,6 +37,7 @@ export const shared: SharedState = (() => {
     sessions: createSessionManager(),
     lastFeedback: new Map(),
     emitPasswordRequest: undefined,
+    passwordRequests: new Map(),
     publishConnection: undefined,
     connectedHost: null,
     instances: 0,
@@ -42,6 +45,7 @@ export const shared: SharedState = (() => {
 
   state.lastFeedback ??= new Map()
   state.emitPasswordRequest ??= undefined
+  state.passwordRequests ??= new Map()
   state.publishConnection ??= undefined
   state.connectedHost ??= null
   state.instances ??= 0

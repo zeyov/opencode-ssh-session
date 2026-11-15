@@ -13,7 +13,10 @@ declare module "@opentui/solid/jsx-runtime" {
 }
 
 declare namespace JSX {
-  type Element = unknown
+  type Element = any
+  interface ElementChildrenAttribute {
+    children: unknown
+  }
   interface IntrinsicElements {
     [name: string]: Record<string, unknown>
   }

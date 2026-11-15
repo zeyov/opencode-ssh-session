@@ -38,11 +38,22 @@ export const SSHSession = Plugin.define({
     await registerCommands(ctx, sessions)
 
     try {
-      const registration = await ctx.rpc.register(SSHPasswordRpc, {})
+      const registration = await ctx.rpc.register(SSHPasswordRpc, {
+        async providePassword(input) {
+          const { requestID, password } = input as { requestID: string; password: string }
+          const finish = shared.passwordRequests.get(requestID)
+          if (!finish) {
+            note("prompt: providePassword for unknown request")
+            return { accepted: false }
+          }
+          finish(password)
+          return { accepted: true }
+        },
+      })
       shared.emitPasswordRequest = (payload) => registration.events.emit("requestPassword", payload)
       shared.publishConnection = (host) =>
         registration.events.emit("connection", { host: host ?? "" })
-      note("rpc: registered requestPassword + connection")
+      note("rpc: registered requestPassword + connection + providePassword")
     } catch (error) {
       // Without RPC the askpass program still prompts on its own.
       shared.emitPasswordRequest = undefined

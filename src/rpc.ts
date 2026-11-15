@@ -1,4 +1,4 @@
-import { Rpc } from "@opencode/plugin"
+import { Rpc } from "@opencode/schema/rpc"
 
 /**
  * Server -> TUI request for a password.
@@ -8,7 +8,25 @@ import { Rpc } from "@opencode/plugin"
  */
 export const SSHPasswordRpc = Rpc.define({
   id: "opencode-ssh-session",
-  methods: {},
+  methods: {
+    providePassword: {
+      input: {
+        type: "object",
+        properties: {
+          requestID: { type: "string" },
+          password: { type: "string" },
+        },
+        required: ["requestID", "password"],
+        additionalProperties: false,
+      },
+      output: {
+        type: "object",
+        properties: { accepted: { type: "boolean" } },
+        required: ["accepted"],
+        additionalProperties: false,
+      },
+    },
+  },
   events: {
     requestPassword: {
       schema: {
