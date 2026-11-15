@@ -63,7 +63,7 @@ Both `package` and `options.askpass` accept absolute paths; a relative `askpass`
 
 ### Local development
 
-Clone the repository and run OpenCode inside it. The repository ships a project-level `opencode.json` that already points at `./plugin`:
+Clone the repository and point a project config at `./plugin`. Keep this entry out of a project that already loads the plugin from the global plugins directory: the same plugin id loaded twice is rejected as a duplicate.
 
 ```json
 {
