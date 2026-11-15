@@ -1,6 +1,6 @@
 // @jsxImportSource solid-js
-import { Plugin, Slot } from "@opencode/plugin/gui"
-import { createSignal, Show } from "solid-js"
+import { Plugin, TitlebarItem } from "@opencode/plugin/gui"
+import { createSignal } from "solid-js"
 import { NOTICE_SOURCE } from "./notice"
 import { SSHPasswordRpc } from "./rpc"
 
@@ -16,10 +16,9 @@ interface InboxItem {
 /**
  * GUI part, used by the web UI and by OpenCode Desktop.
  *
- * It mirrors what the TUI part shows: command feedback (a toast, or a dialog for
- * status results), a `🔗 host` strip while a session is connected, and an OpenCode
- * dialog when a password is needed. Answers go back over RPC, which a browser tab can
- * use; the TUI keeps its file hand-off.
+ * Everything here goes through the app's own components and channels: the titlebar
+ * pill (`TitlebarItem`) for the connected host, `ctx.toast` for command feedback,
+ * `ctx.dialogs` + `ctx.ui` for the password prompt.
  */
 export default Plugin.define({
   setup(ctx) {
@@ -118,14 +117,17 @@ export default Plugin.define({
       }
     })()
 
-    ctx.add(Slot, {
-      at: "window.bottom",
-      order: 100,
-      render: () => (
-        <Show when={host()}>
-          <div style={{ padding: "2px 12px", "font-size": "12px", opacity: 0.8 }}>🔗 {host()}</div>
-        </Show>
-      ),
+    // The connected host lives in the app's titlebar pill, not a custom strip.
+    ctx.add(TitlebarItem, (): TitlebarItem | undefined => {
+      const current = host()
+      if (!current) return undefined
+
+      return {
+        id: "ssh-session",
+        label: current,
+        title: `SSH ${current}`,
+        icon: "server",
+      }
     })
 
     return () => {
