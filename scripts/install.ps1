@@ -22,9 +22,16 @@ if (Test-Path (Join-Path $target ".git")) {
 
 $bundle = Join-Path $target "dist\gui-experimental.cjs"
 $helper = Join-Path $target "scripts\askpass.exe"
+
+$helperOk = $false
+if (Test-Path $helper) {
+    $bytes = [System.IO.File]::ReadAllBytes($helper)
+    $helperOk = $bytes.Length -gt 1024 -and $bytes[0] -eq 0x4D -and $bytes[1] -eq 0x5A
+}
+
 Write-Host ""
 Write-Host "Installed: $target"
 Write-Host "  gui bundle : $(if (Test-Path $bundle) { 'ok' } else { 'missing' })"
-Write-Host "  askpass    : $(if (Test-Path $helper) { 'ok' } else { 'missing' })"
+Write-Host "  askpass    : $(if ($helperOk) { 'ok' } else { 'missing or damaged' })"
 Write-Host ""
 Write-Host "Restart OpenCode to load it."
