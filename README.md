@@ -288,7 +288,7 @@ bun run typecheck
 bun test
 ```
 
-`bun test` uses a fake `ssh` stand-in that is a POSIX executable script, so it runs on Linux and macOS. The CI workflow runs on Ubuntu.
+`bun test` uses a fake `ssh` stand-in that is a POSIX executable script, so it runs on Linux and macOS.
 
 ## License
 
