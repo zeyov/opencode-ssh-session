@@ -12,14 +12,13 @@
       "types": "./src/index.ts"
     },
     "./tui": {
-      "import": "./plugin/tui.tsx",
-      "types": "./plugin/tui.tsx"
+      "types": "./src/tui.tsx",
+      "import": "./src/tui.tsx"
     },
     "./gui-experimental": "./dist/gui-experimental.cjs"
   },
   "files": [
     "src",
-    "plugin",
     "scripts",
     "examples",
     "dist/gui-experimental.cjs",

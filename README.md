@@ -45,14 +45,14 @@ Then restart OpenCode.
 
 ### Installing somewhere else
 
-A clone outside the plugins directory has to be registered explicitly. Point `plugins` at the **`plugin` subdirectory** (not a file), in the global `~/.config/opencode/opencode.json(c)` or a project `opencode.json(c)`:
+A clone outside the plugins directory has to be registered explicitly. Point `plugins` at the **repository root** (not a file), in the global `~/.config/opencode/opencode.json(c)` or a project `opencode.json(c)`:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
   "plugins": [
     {
-      "package": "/absolute/path/to/opencode-ssh-session/plugin",
+      "package": "/absolute/path/to/opencode-ssh-session",
       "options": { "askpass": "/absolute/path/to/askpass.exe" }
     }
   ]
@@ -63,11 +63,11 @@ Both `package` and `options.askpass` accept absolute paths; a relative `askpass`
 
 ### Local development
 
-Clone the repository and point a project config at `./plugin`. Keep this entry out of a project that already loads the plugin from the global plugins directory: the same plugin id loaded twice is rejected as a duplicate.
+Clone the repository and point a project config at the repository root. Keep this entry out of a project that already loads the plugin from the global plugins directory: the same plugin id loaded twice is rejected as a duplicate.
 
 ```json
 {
-  "plugins": [{ "package": "./plugin", "options": { "askpass": "./scripts/askpass.exe" } }]
+  "plugins": [{ "package": "./", "options": { "askpass": "./scripts/askpass.exe" } }]
 }
 ```
 
@@ -138,7 +138,7 @@ Then point the plugin at the absolute path:
 {
   "plugins": [
     {
-      "package": "C:/Users/me/opencode-ssh-session/plugin",
+      "package": "C:/Users/me/opencode-ssh-session",
       "options": { "askpass": "C:/Users/me/opencode-ssh-session/scripts/askpass.exe" }
     }
   ]
@@ -151,7 +151,7 @@ On Linux or macOS use an existing helper such as `ssh-askpass`, `ksshaskpass`, o
 ```json
 {
   "plugins": [
-    { "package": "/home/me/opencode-ssh-session/plugin", "options": { "askpass": "/usr/bin/ssh-askpass" } }
+    { "package": "/home/me/opencode-ssh-session", "options": { "askpass": "/usr/bin/ssh-askpass" } }
   ]
 }
 ```

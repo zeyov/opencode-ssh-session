@@ -3,10 +3,10 @@
 import { mkdir, rename, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
 import type { Plugin } from "@opencode/plugin/tui"
-import { note } from "../src/diag"
-import { NOTICE_SOURCE } from "../src/notice"
-import { passwordPath } from "../src/password-path"
-import { SSHPasswordRpc } from "../src/rpc"
+import { note } from "./diag"
+import { NOTICE_SOURCE } from "./notice"
+import { passwordPath } from "./password-path"
+import { SSHPasswordRpc } from "./rpc"
 
 type Context = Plugin.Context
 
