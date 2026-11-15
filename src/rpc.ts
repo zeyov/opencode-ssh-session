@@ -1,54 +1,15 @@
-import { Rpc } from "@opencode/schema/rpc"
+import { Rpc } from "@opencode/plugin"
+import { SSH_RPC_EVENTS, SSH_RPC_ID, SSH_RPC_METHODS } from "./rpc-contract"
 
 /**
- * Server -> TUI request for a password.
+ * Server <-> UI contract for the password prompt and the connection indicator.
  *
- * The server cannot show UI, so it emits this event; the TUI part opens OpenCode's
- * prompt and drops the answer into the shared hand-off file (see `password-path.ts`).
+ * The server cannot show UI, so it emits `requestPassword`; the TUI or GUI part opens
+ * OpenCode's dialog and answers with `providePassword`. `connection` tells the UI which
+ * host is connected, for the status indicator.
  */
 export const SSHPasswordRpc = Rpc.define({
-  id: "opencode-ssh-session",
-  methods: {
-    providePassword: {
-      input: {
-        type: "object",
-        properties: {
-          requestID: { type: "string" },
-          password: { type: "string" },
-        },
-        required: ["requestID", "password"],
-        additionalProperties: false,
-      },
-      output: {
-        type: "object",
-        properties: { accepted: { type: "boolean" } },
-        required: ["accepted"],
-        additionalProperties: false,
-      },
-    },
-  },
-  events: {
-    requestPassword: {
-      schema: {
-        type: "object",
-        properties: {
-          requestID: { type: "string" },
-          host: { type: "string" },
-        },
-        required: ["requestID", "host"],
-        additionalProperties: false,
-      },
-    },
-    connection: {
-      schema: {
-        type: "object",
-        properties: {
-          /** Empty string means "not connected". */
-          host: { type: "string" },
-        },
-        required: ["host"],
-        additionalProperties: false,
-      },
-    },
-  },
+  id: SSH_RPC_ID,
+  methods: SSH_RPC_METHODS,
+  events: SSH_RPC_EVENTS,
 })

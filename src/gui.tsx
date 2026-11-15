@@ -2,7 +2,7 @@
 import { Plugin, TitlebarItem } from "@opencode/plugin/gui"
 import { createSignal } from "solid-js"
 import { NOTICE_SOURCE } from "./notice"
-import { SSHPasswordRpc } from "./rpc"
+import { SSH_RPC_EVENTS, SSH_RPC_ID, SSH_RPC_METHODS } from "./rpc-contract"
 
 /** Only the fields this part reads from an inbox item. */
 interface InboxItem {
@@ -23,7 +23,7 @@ interface InboxItem {
 export default Plugin.define({
   setup(ctx) {
     const [host, setHost] = createSignal<string | null>(null)
-    const rpc = ctx.client.rpc(SSHPasswordRpc)
+    const rpc = ctx.client.rpc({ id: SSH_RPC_ID, methods: SSH_RPC_METHODS, events: SSH_RPC_EVENTS })
     const controller = new AbortController()
 
     const offConnection = rpc.events.on("connection", (event) => {
