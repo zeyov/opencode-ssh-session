@@ -135,19 +135,13 @@ export function validateHost(host: string): string {
 }
 
 export interface SpawnOptions {
+  /** Password typed by the user in the OpenCode dialog. */
+  readonly password: string
   /**
-   * Path to an `SSH_ASKPASS`-compatible program. Only used when a password was
-   * collected (or `allowAskpass` is set); otherwise the first attempt stays
-   * non-interactive and only tries keys and the agent.
+   * Small helper that hands the password to OpenSSH. The plugin ships it; it only
+   * echoes `OC_SSH_PASSWORD`, so nothing appears on screen.
    */
-  askpass?: string
-  /**
-   * Password already collected from the user. It is handed to the askpass program
-   * through the environment instead of showing another prompt.
-   */
-  password?: string
-  /** Let the askpass program prompt on its own when no password was collected. */
-  allowAskpass?: boolean
+  readonly askpass: string
 }
 
 /**
@@ -156,22 +150,21 @@ export interface SpawnOptions {
 export async function spawnSSH(
   state: SessionState,
   host: string,
-  options?: string,
-  signal?: AbortSignal,
-  spawnOptions: SpawnOptions = {},
+  options: string | undefined,
+  signal: AbortSignal | undefined,
+  spawnOptions: SpawnOptions,
 ): Promise<string> {
   const destination = validateHost(host)
   const sshArgs = ["ssh", "-T"]
 
-  const interactive = Boolean(spawnOptions.password) || spawnOptions.allowAskpass === true
-
-  if (interactive) {
-    // No TTY and no interactive stdin are available here, so OpenSSH can only
-    // obtain a secret through SSH_ASKPASS.
-    sshArgs.push("-o", "NumberOfPasswordPrompts=1")
-  } else {
-    sshArgs.push("-o", "BatchMode=yes")
-  }
+  // No TTY and no interactive stdin are available here, so OpenSSH can only obtain
+  // the secret through SSH_ASKPASS. One prompt, no key or agent attempt.
+  sshArgs.push(
+    "-o",
+    "NumberOfPasswordPrompts=1",
+    "-o",
+    "PreferredAuthentications=password,keyboard-interactive",
+  )
 
   sshArgs.push(
     "-o",
@@ -192,15 +185,12 @@ export async function spawnSSH(
     throw signal.reason instanceof Error ? signal.reason : new Error("SSH operation aborted.")
   }
 
-  const env =
-    interactive && spawnOptions.askpass
-      ? {
-          ...process.env,
-          SSH_ASKPASS: spawnOptions.askpass,
-          SSH_ASKPASS_REQUIRE: "force",
-          ...(spawnOptions.password ? { OC_SSH_PASSWORD: spawnOptions.password } : {}),
-        }
-      : process.env
+  const env = {
+    ...process.env,
+    SSH_ASKPASS: spawnOptions.askpass,
+    SSH_ASKPASS_REQUIRE: "force",
+    OC_SSH_PASSWORD: spawnOptions.password,
+  }
 
   state.proc = Bun.spawn(sshArgs, {
     env,

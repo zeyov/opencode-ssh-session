@@ -21,19 +21,11 @@ Windows (PowerShell):
 git clone https://github.com/zeyov/opencode-ssh-session "$env:USERPROFILE\.config\opencode\plugins\opencode-ssh-session"
 ```
 
-### 2. Build the password helper (Windows only)
-
-Only needed if you sign in with a password instead of a key or agent:
-
-```powershell
-pwsh -File "$env:USERPROFILE\.config\opencode\plugins\opencode-ssh-session\scripts\build-askpass.ps1"
-```
-
-The plugin finds this helper automatically. Linux and macOS users can rely on an existing helper instead — see [Passwords](#passwords).
-
-### 3. Restart OpenCode
+### 2. Restart OpenCode
 
 You should see `ssh_connect`, `ssh`, `ssh_disconnect`, `ssh_info`, `ssh_upload`, `ssh_download` in the tool list, plus the `/ssh-connect`, `/ssh-status` and `/ssh-disconnect` commands.
+
+There is no key setup and nothing else to configure: every connect asks for the password in the OpenCode UI.
 
 ### Updating
 
@@ -50,16 +42,9 @@ A clone outside the plugins directory has to be registered explicitly. Point `pl
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [
-    {
-      "package": "/absolute/path/to/opencode-ssh-session",
-      "options": { "askpass": "/absolute/path/to/askpass.exe" }
-    }
-  ]
+  "plugins": [{ "package": "/absolute/path/to/opencode-ssh-session" }]
 }
 ```
-
-Both `package` and `options.askpass` accept absolute paths; a relative `askpass` resolves against the project directory. The `askpass` option is optional — without it the plugin uses the helper bundled next to `src/`.
 
 ### Local development
 
@@ -67,7 +52,7 @@ Clone the repository and point a project config at the repository root. Keep thi
 
 ```json
 {
-  "plugins": [{ "package": "./", "options": { "askpass": "./scripts/askpass.exe" } }]
+  "plugins": [{ "package": "./" }]
 }
 ```
 
@@ -107,60 +92,21 @@ Remote commands use the same `bash` rules as local shell commands, including age
 
 `ssh_connect` runs OpenSSH non-interactively. After connection approval, OpenSSH uses `StrictHostKeyChecking=accept-new`: first-time host keys are added to the user's normal known-hosts database, while changed host keys are rejected. The plugin does not bypass changed-key warnings.
 
-By default `BatchMode=yes` is set, so only key or agent authentication can succeed. Connection errors include OpenSSH's stderr output.
-
 ### Passwords
 
-`ssh_connect` is non-interactive: the SSH command channel owns stdin, and the plugin
-runs inside the OpenCode server, so OpenSSH can only obtain a secret from an
-`SSH_ASKPASS` program.
+Every connect asks for the password in the OpenCode UI — there is no key, agent, or
+saved credential path, and nothing to configure.
 
-The first attempt always tries keys and the agent (`BatchMode=yes`). If OpenSSH
-reports `Permission denied (publickey)`, the plugin asks once for a password:
+The dialog is the plugin's own: the server part emits an RPC event, the TUI or GUI part
+shows it, and the answer travels back. `ssh` needs a secret through `SSH_ASKPASS`
+because its stdin carries the command channel, so the plugin ships a three-kilobyte
+helper that only echoes `OC_SSH_PASSWORD`. It never opens a window and is already in the
+repository — no build step on install.
 
-1. With the TUI part loaded, the prompt is OpenCode's own dialog (server → TUI over
-   RPC, answer handed back through a short-lived file in the temp directory).
-2. Otherwise the `askpass` program shows its own prompt, about ten seconds later.
+Cancelling the dialog cancels the connect; the other password-related state is
+discarded with the session.
 
-Either way the answer reaches OpenSSH through `OC_SSH_PASSWORD` and the askpass
-helper, so it is never added to the transcript.
-
-A ready-made Windows helper is included in the repository. Build it once:
-
-```powershell
-git clone https://github.com/zeyov/opencode-ssh-session
-pwsh -File opencode-ssh-session/scripts/build-askpass.ps1
-```
-
-Then point the plugin at the absolute path:
-
-```json
-{
-  "plugins": [
-    {
-      "package": "C:/Users/me/opencode-ssh-session",
-      "options": { "askpass": "C:/Users/me/opencode-ssh-session/scripts/askpass.exe" }
-    }
-  ]
-}
-```
-
-On Linux or macOS use an existing helper such as `ssh-askpass`, `ksshaskpass`, or
-`x11-ssh-askpass`:
-
-```json
-{
-  "plugins": [
-    { "package": "/home/me/opencode-ssh-session", "options": { "askpass": "/usr/bin/ssh-askpass" } }
-  ]
-}
-```
-
-Installing a key once is still the cheaper path, and then nothing ever prompts:
-
-```sh
-ssh-copy-id user@host
-```
+Linux and macOS work the same way, using the same bundled helper.
 
 
 ## Tools

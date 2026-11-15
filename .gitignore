@@ -6,5 +6,4 @@ dist/*
 .env.*
 .DS_Store
 
-# Built askpass helper
-scripts/askpass.exe
+# Built askpass helper (committed: installs must not need a build step)

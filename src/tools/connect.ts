@@ -1,7 +1,7 @@
-import { askpassOf } from "../options"
+import { bundledAskpass } from "../options"
 import { requestPassword } from "../password"
 import type { Context, ToolDefinition } from "../plugin-types"
-import { spawnWithPasswordFallback } from "../session/auth"
+import { connectWithPassword } from "../session/auth"
 import { isAlive } from "../session/commands"
 import { validateHost } from "../session/connection"
 import type { SessionManager } from "../session/manager"
@@ -55,12 +55,12 @@ export function createConnectTool(sessions: SessionManager, plugin: Context): To
 
       try {
         const content = await withMutex(state, () =>
-          spawnWithPasswordFallback(
+          connectWithPassword(
             state,
             host,
             options || undefined,
             context.signal,
-            { askpass: askpassOf(plugin) },
+            bundledAskpass(),
             requestPassword,
           ),
         )

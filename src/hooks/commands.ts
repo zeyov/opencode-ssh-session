@@ -1,8 +1,8 @@
 import { NOTICE_SOURCE } from "../notice"
-import { askpassOf } from "../options"
+import { bundledAskpass } from "../options"
 import { requestPassword } from "../password"
 import type { Context } from "../plugin-types"
-import { spawnWithPasswordFallback } from "../session/auth"
+import { connectWithPassword } from "../session/auth"
 import { executeCommand, isAlive } from "../session/commands"
 import { validateHost } from "../session/connection"
 import type { SessionManager } from "../session/manager"
@@ -139,16 +139,6 @@ export async function registerCommands(ctx: Context, sessions: SessionManager): 
           return
         }
 
-        if (password && !askpassOf(ctx)) {
-          await report(
-            ctx,
-            sessionID,
-            "❌ 没有配置 askpass，密码无法交给 ssh。请在 opencode.json 的插件 options 里设置 askpass。",
-            "SSH: not connected.",
-          )
-          return
-        }
-
         try {
           await ctx.permission.assert({
             sessionID,
@@ -171,12 +161,12 @@ export async function registerCommands(ctx: Context, sessions: SessionManager): 
 
         try {
           await withMutex(state, () =>
-            spawnWithPasswordFallback(
+            connectWithPassword(
               state,
               host,
               options,
               undefined,
-              { askpass: askpassOf(ctx) },
+              bundledAskpass(),
               password ? async () => password : requestPassword,
             ),
           )
