@@ -6,7 +6,7 @@ An [OpenCode](https://opencode.ai) plugin that provides persistent SSH session t
 
 This repository is an OpenCode **V2** plugin (`@opencode/plugin`). OpenCode discovers it automatically when it is cloned into the global plugins directory, so no configuration is needed.
 
-> `opencode plugin add github:...` is not used here: on OpenCode 2.2.5 that command fails for every GitHub package on some machines (`git dep preparation failed`), so the steps below avoid it.
+> `opencode plugin add github:...` cannot be used: OpenCode 2.3.0 runs its own CLI instead of npm while preparing a git dependency (`Unrecognized flag: --force in command opencode`), so every `github:` package fails there. Cloning into the plugins directory is the supported path.
 
 ### 1. Clone into the global plugins directory
 
@@ -29,11 +29,15 @@ There is no key setup and nothing else to configure: every connect asks for the 
 
 ### Updating
 
-```sh
-cd ~/.config/opencode/plugins/opencode-ssh-session && git pull
+```powershell
+pwsh -File "$env:USERPROFILE\.config\opencode\plugins\opencode-ssh-session\scripts\install.ps1"
 ```
 
-Then restart OpenCode.
+```sh
+sh ~/.config/opencode/plugins/opencode-ssh-session/scripts/install.sh
+```
+
+The same scripts install a missing copy, so `install.ps1`/`install.sh` also work as the first step once the repository is on disk.
 
 ### Installing somewhere else
 
